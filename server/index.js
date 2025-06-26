@@ -43,6 +43,9 @@ app.use('/api/tasks', require('./routes/tasks'));
 // Chat routes
 app.use('/api/chat', require('./routes/chat'));
 
+const meetingsRoute = require('./routes/meetings');
+app.use('/api/meetings', meetingsRoute);
+
 const voiceChannelUsers = {};
 
 io.on('connection', (socket) => {

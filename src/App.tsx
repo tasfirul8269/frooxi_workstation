@@ -8,7 +8,6 @@ import Header from './components/Layout/Header';
 import DashboardHome from './components/Dashboard/DashboardHome';
 import KanbanBoard from './components/Tasks/KanbanBoard';
 import TeamManagement from './components/Team/TeamManagement';
-import ChatSystem from './components/Chat/ChatSystem';
 import CalendarView from './components/Calendar/CalendarView';
 import SettingsPage from './components/Settings/SettingsPage';
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
@@ -30,16 +29,19 @@ function OrgLayout() {
       <Sidebar 
         activeSection={section} 
         onSectionChange={(sec) => navigate(`/${orgSlug}/${sec}`)} 
+        collapsed={section === 'chat'}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={section} />
-        <main className="flex-1 overflow-auto p-6">
+        {section !== 'chat' && <Header title={section} />}
+        <main className={`flex-1 overflow-auto ${section === 'chat' ? '' : 'p-6'}`}>
           <Routes>
             <Route path="dashboard" element={<DashboardHome />} />
             <Route path="tasks" element={<KanbanBoard />} />
             <Route path="team" element={<TeamManagement />} />
-            <Route path="chat" element={<ChatSystem />} />
-            <Route path="calendar" element={<CalendarView />} />
+            <Route path="calendar">
+              <Route index element={<CalendarView />} />
+              <Route path=":meetingId" element={<CalendarView />} />
+            </Route>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to={`/${orgSlug}/dashboard`} replace />} />
           </Routes>

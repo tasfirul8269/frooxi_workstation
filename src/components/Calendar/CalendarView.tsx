@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Plus, 
@@ -9,10 +9,13 @@ import {
   Video,
   MapPin,
   Filter,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import CreateMeetingModal from './CreateMeetingModal';
+import { useApp } from '../../context/AppContext';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface Meeting {
   id: string;
@@ -33,46 +36,25 @@ const CalendarView: React.FC = () => {
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
   const [showCreateMeeting, setShowCreateMeeting] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [embeddedMeetingUrl, setEmbeddedMeetingUrl] = useState<string | null>(null);
+  const { meetingId } = useParams();
+  const navigate = useNavigate();
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
-  // Mock meetings data
-  const meetings: Meeting[] = [
-    {
-      id: '1',
-      title: 'Daily Standup',
-      description: 'Daily team sync and progress updates',
-      startTime: new Date(2024, 2, 15, 9, 0),
-      endTime: new Date(2024, 2, 15, 9, 30),
-      attendees: ['1', '2', '3', '4'],
-      meetLink: 'https://meet.google.com/abc-defg-hij',
-      status: 'scheduled',
-      createdBy: '1',
-    },
-    {
-      id: '2',
-      title: 'Project Review',
-      description: 'Weekly project review and planning session',
-      startTime: new Date(2024, 2, 15, 14, 0),
-      endTime: new Date(2024, 2, 15, 15, 30),
-      attendees: ['1', '2', '3'],
-      meetLink: 'https://meet.google.com/xyz-uvwx-yz',
-      status: 'scheduled',
-      createdBy: '1',
-    },
-    {
-      id: '3',
-      title: 'Client Presentation',
-      description: 'Present project progress to client',
-      startTime: new Date(2024, 2, 16, 10, 0),
-      endTime: new Date(2024, 2, 16, 11, 0),
-      attendees: ['1', '2'],
-      meetLink: 'https://meet.google.com/client-meet-123',
-      location: 'Conference Room A',
-      status: 'scheduled',
-      createdBy: '1',
-    },
-  ];
+  const { meetings, fetchMeetings } = useApp();
+
+  useEffect(() => {
+    fetchMeetings();
+    // eslint-disable-next-line
+  }, []);
+
+  // Convert string dates to Date objects for rendering
+  const parsedMeetings = meetings.map(m => ({
+    ...m,
+    startTime: typeof m.startTime === 'string' ? new Date(m.startTime) : m.startTime,
+    endTime: typeof m.endTime === 'string' ? new Date(m.endTime) : m.endTime,
+  }));
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -98,8 +80,8 @@ const CalendarView: React.FC = () => {
   };
 
   const getMeetingsForDate = (date: Date) => {
-    return meetings.filter(meeting => {
-      const meetingDate = new Date(meeting.startTime);
+    return parsedMeetings.filter(meeting => {
+      const meetingDate = meeting.startTime;
       return (
         meetingDate.getDate() === date.getDate() &&
         meetingDate.getMonth() === date.getMonth() &&
@@ -284,7 +266,7 @@ const CalendarView: React.FC = () => {
           <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
             <h3 className="font-semibold text-white mb-4">Upcoming Meetings</h3>
             <div className="space-y-3">
-              {meetings
+              {parsedMeetings
                 .filter(meeting => meeting.startTime > new Date())
                 .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
                 .slice(0, 5)
@@ -378,7 +360,12 @@ const CalendarView: React.FC = () => {
                 </div>
                 
                 {selectedMeeting.meetLink && (
-                  <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors">
+                  <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors"
+                    onClick={() => {
+                      navigate(`./${selectedMeeting.id}`);
+                      setSelectedMeeting(null);
+                    }}
+                  >
                     <Video className="w-4 h-4" />
                     <span>Join Meeting</span>
                   </button>
@@ -389,9 +376,41 @@ const CalendarView: React.FC = () => {
         </div>
       )}
 
-      {/* Create Meeting Modal */}
-      {showCreateMeeting && (
-        <CreateMeetingModal onClose={() => setShowCreateMeeting(false)} />
+      {meetingId ? (
+        (() => {
+          const meeting = parsedMeetings.find(m => m.id === meetingId);
+          if (!meeting) return (
+            <div className="flex flex-col items-center justify-center h-full min-h-[600px]">
+              <div className="text-white text-lg">Meeting not found.</div>
+              <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg">Back to Calendar</button>
+            </div>
+          );
+          return (
+            <div className="flex flex-col h-full min-h-[600px]">
+              <div className="flex justify-end p-4">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <iframe
+                src={meeting.meetLink}
+                title="Meeting"
+                className="flex-1 w-full border-0 min-h-[500px]"
+                allow="camera; microphone; fullscreen; display-capture"
+              />
+            </div>
+          );
+        })()
+      ) : (
+        <div className="space-y-6">
+          {/* Create Meeting Modal */}
+          {showCreateMeeting && (
+            <CreateMeetingModal onClose={() => setShowCreateMeeting(false)} />
+          )}
+        </div>
       )}
     </div>
   );

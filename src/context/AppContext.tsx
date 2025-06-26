@@ -40,6 +40,7 @@ interface AppContextType {
   markAsRead: (channelId: string, lastReadMessageId: string) => Promise<void>;
   reactToMessage: (channelId: string, msgId: string, emoji: string) => Promise<void>;
   fetchCategories: () => Promise<void>;
+  fetchMeetings: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -328,6 +329,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Fetch meetings from backend
+  const fetchMeetings = async () => {
+    const token = localStorage.getItem('frooxi_token');
+    if (!token) return;
+    const res = await fetch(`${API_URL}/meetings`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setMeetings(data.meetings.map((meeting: any) => ({ ...meeting, id: meeting._id })));
+    }
+  };
+
   useEffect(() => {
     if (organization) {
       fetchRoles();
@@ -335,6 +349,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetchTasks();
       fetchChannels();
       fetchCategories();
+      fetchMeetings();
     }
   }, [organization]);
 
@@ -498,6 +513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       markAsRead,
       reactToMessage,
       fetchCategories,
+      fetchMeetings,
     }}>
       {children}
     </AppContext.Provider>
