@@ -10,7 +10,8 @@ import {
   MapPin,
   Filter,
   Search,
-  X
+  X,
+  CheckSquare
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import CreateMeetingModal from './CreateMeetingModal';
@@ -42,7 +43,7 @@ const CalendarView: React.FC = () => {
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
-  const { meetings, fetchMeetings } = useApp();
+  const { meetings, fetchMeetings, tasks } = useApp();
 
   useEffect(() => {
     fetchMeetings();
@@ -90,6 +91,31 @@ const CalendarView: React.FC = () => {
     });
   };
 
+  const getTasksForDate = (date: Date) => {
+    return tasks.filter(task => {
+      if (!task.dueDate) return false;
+      const taskDate = new Date(task.dueDate);
+      return (
+        taskDate.getDate() === date.getDate() &&
+        taskDate.getMonth() === date.getMonth() &&
+        taskDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
+
+  const getTaskPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-600';
+      case 'medium':
+        return 'bg-yellow-600';
+      case 'low':
+        return 'bg-green-600';
+      default:
+        return 'bg-gray-600';
+    }
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -134,7 +160,7 @@ const CalendarView: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Calendar & Meetings</h1>
-          <p className="text-gray-400">Schedule and manage your meetings</p>
+          <p className="text-gray-400">Schedule meetings and track task due dates</p>
         </div>
         
         {isAdmin && (
@@ -210,6 +236,7 @@ const CalendarView: React.FC = () => {
                 }
 
                 const dayMeetings = getMeetingsForDate(day);
+                const dayTasks = getTasksForDate(day);
                 const isToday = 
                   day.getDate() === new Date().getDate() &&
                   day.getMonth() === new Date().getMonth() &&
@@ -228,7 +255,8 @@ const CalendarView: React.FC = () => {
                       {day.getDate()}
                     </div>
                     <div className="space-y-1">
-                      {dayMeetings.slice(0, 2).map((meeting) => (
+                      {/* Show meetings first */}
+                      {dayMeetings.slice(0, 1).map((meeting) => (
                         <div
                           key={meeting.id}
                           onClick={() => setSelectedMeeting(meeting)}
@@ -237,9 +265,20 @@ const CalendarView: React.FC = () => {
                           {formatTime(meeting.startTime)} {meeting.title}
                         </div>
                       ))}
-                      {dayMeetings.length > 2 && (
+                      {/* Show tasks */}
+                      {dayTasks.slice(0, 1).map((task) => (
+                        <div
+                          key={task.id}
+                          className={`text-xs p-1 rounded cursor-pointer ${getTaskPriorityColor(task.priority)} text-white truncate flex items-center space-x-1`}
+                        >
+                          <CheckSquare className="w-3 h-3" />
+                          <span>{task.title}</span>
+                        </div>
+                      ))}
+                      {/* Show count if more items */}
+                      {(dayMeetings.length + dayTasks.length) > 2 && (
                         <div className="text-xs text-gray-400">
-                          +{dayMeetings.length - 2} more
+                          +{(dayMeetings.length + dayTasks.length) - 2} more
                         </div>
                       )}
                     </div>
@@ -297,6 +336,51 @@ const CalendarView: React.FC = () => {
                           <span>Video call</span>
                         </div>
                       )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Upcoming Tasks */}
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4">
+            <h3 className="font-semibold text-white mb-4">Upcoming Tasks</h3>
+            <div className="space-y-3">
+              {tasks
+                .filter(task => task.dueDate && new Date(task.dueDate) > new Date())
+                .sort((a, b) => {
+                  const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+                  const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+                  return dateA - dateB;
+                })
+                .slice(0, 5)
+                .map((task) => (
+                  <div
+                    key={task.id}
+                    className="p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-white text-sm">{task.title}</h4>
+                      <span className={`w-2 h-2 rounded-full ${getTaskPriorityColor(task.priority)}`}></span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2 text-xs text-gray-400">
+                        <Calendar className="w-3 h-3" />
+                        <span>
+                          {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-gray-400">
+                        <CheckSquare className="w-3 h-3" />
+                        <span className={`capitalize ${
+                          task.status === 'completed' ? 'text-green-400' :
+                          task.status === 'in_progress' ? 'text-blue-400' :
+                          task.status === 'review' ? 'text-yellow-400' :
+                          'text-gray-400'
+                        }`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -16,6 +16,18 @@ const DashboardHome: React.FC = () => {
   const { tasks } = useApp();
   const { user } = useAuth();
 
+  // Only allow admin or super_admin
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="bg-gray-900 text-white p-8 rounded-xl shadow-lg border border-gray-700">
+          <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+          <p className="text-gray-400">You do not have permission to view the dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
   const stats = {
     totalTasks: tasks.length,
     completedTasks: tasks.filter(t => t.status === 'completed').length,

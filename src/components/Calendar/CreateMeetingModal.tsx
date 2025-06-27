@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, Users, Video, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface CreateMeetingModalProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface CreateMeetingModalProps {
 
 const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ onClose }) => {
   const { scheduleMeeting } = useApp();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -27,21 +29,22 @@ const CreateMeetingModal: React.FC<CreateMeetingModalProps> = ({ onClose }) => {
     { id: '4', name: 'Alice Johnson', email: 'alice@company.com' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
     const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
     
-    scheduleMeeting({
+    await scheduleMeeting({
       title: formData.title,
       description: formData.description,
       startTime: startDateTime,
       endTime: endDateTime,
       attendees: formData.attendees,
       meetLink: formData.meetLink || `https://meet.google.com/${Math.random().toString(36).substr(2, 9)}`,
-      createdBy: 'current-user-id', // This would come from auth context
+      createdBy: user?.id || '',
       status: 'scheduled',
+      location: formData.location,
     });
     
     onClose();

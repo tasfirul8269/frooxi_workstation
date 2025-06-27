@@ -163,7 +163,7 @@ const KanbanBoard: React.FC = () => {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto custom-scrollbar">
         {canDrag ? (
         <DndContext
           sensors={sensors}

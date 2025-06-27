@@ -15,7 +15,9 @@ interface AppContextType {
   createTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   addRole: (role: Omit<Role, 'id'>) => void;
   createChannel: (channel: Omit<ChatChannel, 'id' | 'createdAt'>) => void;
-  scheduleMeeting: (meeting: Omit<Meeting, 'id'>) => void;
+  scheduleMeeting: (meeting: Omit<Meeting, 'id'>) => Promise<void>;
+  updateMeeting: (id: string, updates: Partial<Meeting>) => Promise<void>;
+  deleteMeeting: (id: string) => Promise<void>;
   createUser: (userData: any) => Promise<{ success: boolean; message?: string }>;
   fetchUsers: () => Promise<void>;
   editUser: (id: string, updates: Partial<User>) => Promise<void>;
@@ -203,15 +205,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await fetchChannels();
   };
 
-  const scheduleMeeting = (meetingData: Omit<Meeting, 'id'>) => {
-    if (!organization) return;
-    
-    const newMeeting: Meeting = {
-      ...meetingData,
-      id: Date.now().toString(),
-      organizationId: organization.id,
-    };
-    setMeetings(prev => [...prev, newMeeting]);
+  // Create meeting via backend
+  const scheduleMeeting = async (meetingData: Omit<Meeting, 'id'>) => {
+    const token = localStorage.getItem('frooxi_token');
+    if (!token || !organization) return;
+    const res = await fetch(`${API_URL}/meetings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(meetingData),
+    });
+    if (res.ok) {
+      await fetchMeetings();
+    }
+  };
+
+  // Update meeting via backend
+  const updateMeeting = async (id: string, updates: Partial<Meeting>) => {
+    const token = localStorage.getItem('frooxi_token');
+    if (!token) return;
+    await fetch(`${API_URL}/meetings/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(updates),
+    });
+    await fetchMeetings();
+  };
+
+  // Delete meeting via backend
+  const deleteMeeting = async (id: string) => {
+    const token = localStorage.getItem('frooxi_token');
+    if (!token) return;
+    await fetch(`${API_URL}/meetings/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    await fetchMeetings();
   };
 
   const fetchUsers = async () => {
@@ -490,6 +518,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createUser,
       createChannel,
       scheduleMeeting,
+      updateMeeting,
+      deleteMeeting,
       fetchUsers,
       editUser,
       deleteUser,

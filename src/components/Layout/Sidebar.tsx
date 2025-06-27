@@ -21,7 +21,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange, colla
   const { user, organization, logout } = useAuth();
 
   const menuItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    ...(user && (user.role === 'admin' || user.role === 'super_admin') ? [
+      { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    ] : []),
     { id: 'tasks', icon: CheckSquare, label: 'Tasks' },
     { id: 'team', icon: Users, label: 'Team' },
     { id: 'calendar', icon: Calendar, label: 'Calendar' },
